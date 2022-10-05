@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using Microsoft.OpenApi.Services;
 using Streamish.Models;
 using Streamish.Utils;
 
@@ -157,34 +158,40 @@ namespace Streamish.Repositories
 
                     using (var reader = cmd.ExecuteReader())
                     {
-                        Video video = null;
-
-                        if (reader.Read())
+                        
+                        List<Video> videos = new List<Video>();
+                        Video currentVideo = null;
+                        while (reader.Read())
                         {
                             var videoId = DbUtils.GetInt(reader, "VideoId");
-
-                            video = new Video()
+                            currentVideo = videos.FirstOrDefault(p => p.Id == videoId);
+                            if (currentVideo == null)
                             {
-                                Id = videoId,
-                                Title = DbUtils.GetString(reader, "Title"),
-                                Description = DbUtils.GetString(reader, "Description"),
-                                DateCreated = DbUtils.GetDateTime(reader, "VideoDateCreated"),
-                                Url = DbUtils.GetString(reader, "Url"),
-                                UserProfileId = DbUtils.GetInt(reader, "VideoUserProfileId"),
-                                UserProfile = new UserProfile()
+                                currentVideo = new Video()
                                 {
-                                    Id = DbUtils.GetInt(reader, "VideoUserProfileId"),
-                                    Name = DbUtils.GetString(reader, "Name"),
-                                    Email = DbUtils.GetString(reader, "Email"),
-                                    DateCreated = DbUtils.GetDateTime(reader, "UserProfileDateCreated"),
-                                    ImageUrl = DbUtils.GetString(reader, "UserProfileImageUrl"),
-                                },
-                                Comments = new List<Comment>()
-                            };
-                            
+                                    Id = videoId,
+                                    Title = DbUtils.GetString(reader, "Title"),
+                                    Description = DbUtils.GetString(reader, "Description"),
+                                    DateCreated = DbUtils.GetDateTime(reader, "VideoDateCreated"),
+                                    Url = DbUtils.GetString(reader, "Url"),
+                                    UserProfileId = DbUtils.GetInt(reader, "VideoUserProfileId"),
+                                    UserProfile = new UserProfile()
+                                    {
+                                        Id = DbUtils.GetInt(reader, "VideoUserProfileId"),
+                                        Name = DbUtils.GetString(reader, "Name"),
+                                        Email = DbUtils.GetString(reader, "Email"),
+                                        DateCreated = DbUtils.GetDateTime(reader, "UserProfileDateCreated"),
+                                        ImageUrl = DbUtils.GetString(reader, "UserProfileImageUrl"),
+                                    },
+                                    Comments = new List<Comment>()
+
+                                };
+                                videos.Add(currentVideo);
+
+                            }
                             if (DbUtils.IsNotDbNull(reader, "CommentId"))
                             {
-                                video.Comments.Add(new Comment()
+                                currentVideo.Comments.Add(new Comment()
                                 {
                                     Id = DbUtils.GetInt(reader, "CommentId"),
                                     Message = DbUtils.GetString(reader, "Message"),
@@ -192,9 +199,8 @@ namespace Streamish.Repositories
                                     UserProfileId = DbUtils.GetInt(reader, "CommentUserProfileId")
                                 });
                             }
-
                         }
-                        return video;
+                        return currentVideo;
                     }
                 }
             }
